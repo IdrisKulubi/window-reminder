@@ -27,9 +27,7 @@ A Progressive Web App (PWA) built with Next.js and shadcn/ui that reminds users 
 - Save user preferences and reminder times using local storage
 - Option to sync settings across devices (optional feature)
 
-### 5. User Authentication (Optional)
-- Simple login system if cross-device syncing is implemented
-- Optional cloud storage of user preferences
+
 
 ## Technical Requirements
 

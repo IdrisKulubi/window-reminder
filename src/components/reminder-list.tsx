@@ -1,8 +1,28 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useReminders } from "@/hooks/use-reminders";
+import { useReminders, ReminderTime } from "@/hooks/use-reminders";
 import { Trash2 } from "lucide-react";
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function formatRecurrence(reminder: ReminderTime): string {
+  const { recurrence } = reminder;
+  if (recurrence.type === "daily") return "Daily";
+  if (recurrence.type === "weekly" && recurrence.days) {
+    return recurrence.days
+      .sort((a, b) => a - b)
+      .map(d => WEEKDAYS[d])
+      .join("/") || "Weekly";
+  }
+  if (recurrence.type === "monthly" && recurrence.dates) {
+    return recurrence.dates
+      .sort((a, b) => a - b)
+      .map(d => `${d}${d === 1 ? "st" : d === 2 ? "nd" : d === 3 ? "rd" : "th"}`)
+      .join("/") || "Monthly";
+  }
+  return "";
+}
 
 /**
  * Props for ReminderList.
@@ -39,9 +59,10 @@ export function ReminderList({ className }: ReminderListProps) {
             key={reminder.id}
             className="flex items-center justify-between bg-muted rounded-lg px-4 py-2 shadow-sm hover:bg-accent transition-colors group animate-fade-in-slide"
           >
-            <span className="font-mono text-lg tracking-wider text-primary">
-              {reminder.time}
-            </span>
+            <div className="flex flex-col">
+              <span className="font-mono text-lg tracking-wider text-primary">{reminder.time}</span>
+              <span className="text-xs text-muted-foreground mt-0.5">{formatRecurrence(reminder)}</span>
+            </div>
             <Button
               variant="ghost"
               size="icon"

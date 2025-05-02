@@ -3,11 +3,26 @@
 import { useCallback, useEffect, useState } from "react";
 
 /**
+ * Recurrence type for reminders.
+ */
+export type RecurrenceType = "daily" | "weekly" | "monthly";
+
+/**
+ * Recurrence details for a reminder.
+ */
+export interface ReminderRecurrence {
+  type: RecurrenceType;
+  days?: number[];   // 0=Sun, 1=Mon, ... for weekly
+  dates?: number[];  // 1-31 for monthly
+}
+
+/**
  * Interface for a single reminder time (24-hour format, e.g., "21:30").
  */
 export interface ReminderTime {
   id: string; // unique identifier
   time: string; // "HH:mm"
+  recurrence: ReminderRecurrence;
 }
 
 /**
@@ -15,7 +30,7 @@ export interface ReminderTime {
  */
 export interface UseReminders {
   reminders: ReminderTime[];
-  addReminder: (time: string) => boolean;
+  addReminder: (time: string, recurrence: ReminderRecurrence) => boolean;
   removeReminder: (id: string) => void;
   clearReminders: () => void;
   hasError: boolean;
@@ -59,8 +74,19 @@ export function useReminders(): UseReminders {
   // Validate time string (HH:mm, 24-hour)
   const isValidTime = (time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
 
+  // Validate recurrence
+  const isValidRecurrence = (recurrence: ReminderRecurrence) => {
+    if (recurrence.type === "weekly") {
+      return Array.isArray(recurrence.days) && recurrence.days.length > 0;
+    }
+    if (recurrence.type === "monthly") {
+      return Array.isArray(recurrence.dates) && recurrence.dates.length > 0 && recurrence.dates.every(d => d >= 1 && d <= 31);
+    }
+    return true; // daily is always valid
+  };
+
   // Add a new reminder (returns true if added, false if invalid/duplicate)
-  const addReminder = useCallback((time: string) => {
+  const addReminder = useCallback((time: string, recurrence: ReminderRecurrence) => {
     setHasError(false);
     setErrorMessage(null);
     if (!isValidTime(time)) {
@@ -68,14 +94,20 @@ export function useReminders(): UseReminders {
       setErrorMessage("Invalid time format. Use HH:mm (24-hour).");
       return false;
     }
-    if (reminders.some(r => r.time === time)) {
+    if (!isValidRecurrence(recurrence)) {
       setHasError(true);
-      setErrorMessage("Reminder for this time already exists.");
+      setErrorMessage("Please select valid recurrence options.");
+      return false;
+    }
+    // Prevent duplicate: same time + same recurrence
+    if (reminders.some(r => r.time === time && JSON.stringify(r.recurrence) === JSON.stringify(recurrence))) {
+      setHasError(true);
+      setErrorMessage("Reminder for this time and recurrence already exists.");
       return false;
     }
     setReminders(prev => [
       ...prev,
-      { id: crypto.randomUUID(), time },
+      { id: crypto.randomUUID(), time, recurrence },
     ]);
     return true;
   }, [reminders]);
