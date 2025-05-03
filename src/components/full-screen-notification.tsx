@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { ReminderTime } from "@/hooks/reminders-context";
 import { toast } from "sonner";
+import { Bug } from "lucide-react";
 
 /**
  * Props for FullScreenNotification.
@@ -58,8 +59,8 @@ export function FullScreenNotification({ open, reminder, onDismiss }: FullScreen
         if (Notification.permission === "granted") {
           console.log("[Notification] Sending browser notification");
           try {
-            new Notification("Window Reminder", {
-              body: reminder?.time ? `It's ${reminder.time}. Please close your window!` : "Please close your window!",
+            new Notification("Mosquito Alert! 🦟", {
+              body: reminder?.time ? `It's ${reminder.time}. Close that window or prepare for battle!` : "The mosquitoes are coming! Close your window!",
               icon: "/window.svg"
             });
           } catch (err) {
@@ -94,29 +95,45 @@ export function FullScreenNotification({ open, reminder, onDismiss }: FullScreen
       <audio ref={audioRef} src="/reminder.mp3" preload="auto" />
       <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
         <AlertDialogContent
-          className="fullscreen-notification-overlay"
+          className="absolute inset-0 w-screen h-screen m-0 p-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-indigo-900/95 via-purple-900/95 to-fuchsia-900/95 backdrop-blur-lg"
         >
-          {/* Pulsing background effect */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-            <div className="animate-pulse-glow rounded-full w-[80vw] h-[80vw] max-w-[600px] max-h-[600px] opacity-40"></div>
+          {/* Animated elements */}
+          <div className="absolute inset-0 overflow-hidden">
+            {/* Animated bugs flying around */}
+            <Bug className="absolute text-red-400/50 w-8 h-8 left-[10%] top-[20%] animate-float-1" />
+            <Bug className="absolute text-red-400/50 w-10 h-10 right-[15%] top-[15%] animate-float-2" />
+            <Bug className="absolute text-red-400/50 w-6 h-6 left-[20%] bottom-[20%] animate-float-3" />
+            <Bug className="absolute text-red-400/50 w-12 h-12 right-[25%] bottom-[25%] animate-float-4" />
+            
+            {/* Pulsing glow behind content */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vh] h-[80vh] rounded-full bg-red-600/20 animate-pulse-glow"></div>
           </div>
-          {/* Centered content */}
-          <div className="relative z-10 flex flex-col items-center justify-center w-full max-w-[95vw] sm:max-w-md bg-background/90 rounded-xl shadow-lg border border-primary/10 p-6">
-            <AlertDialogHeader className="flex flex-col items-center gap-4">
-              <AlertDialogTitle className="text-2xl sm:text-3xl md:text-4xl font-bold text-destructive text-center drop-shadow-lg animate-fade-in-slide">
-                Reminder: Close Your Window!
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-base sm:text-lg text-center text-primary font-mono mt-2">
-                It&apos;s {reminder?.time}. Please make sure your window is closed.
+          
+          {/* Main content container - Re-enforcing centering */}
+          <div className="relative z-10 flex flex-col items-center w-[95vw] max-w-2xl mx-auto bg-background/80 backdrop-blur-md rounded-2xl shadow-2xl border border-destructive/20 p-6 sm:p-8 animate-pop-in">
+            {/* Header - Centered within the container */}
+            <AlertDialogHeader className="w-full flex flex-col items-center gap-6 text-center">
+              <div className="flex items-center gap-4">
+                <Bug className="h-12 w-12 text-destructive animate-bounce" />
+                <AlertDialogTitle className="text-4xl sm:text-5xl font-extrabold text-destructive drop-shadow-lg animate-fade-in-slide">
+                  MOSQUITO INVASION
+                </AlertDialogTitle>
+                <Bug className="h-12 w-12 text-destructive animate-bounce" />
+              </div>
+              
+              <AlertDialogDescription className="w-full text-xl sm:text-2xl text-primary font-mono mt-2 font-semibold leading-relaxed">
+                It&apos;s {reminder?.time} and those blood-thirsty skeeters 🦟 are about to crash your vibe! Close your window ASAP! 🚪💨
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="flex flex-col items-center mt-6">
+            
+            {/* Footer - Centered within the container */}
+            <AlertDialogFooter className="flex flex-col items-center mt-8 w-full">
               <AlertDialogAction
                 onClick={handleDismiss}
-                className="w-full py-4 text-lg font-semibold rounded-lg bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-4 focus:ring-destructive/50 focus:outline-none transition"
+                className="w-full sm:w-2/3 py-6 text-2xl font-bold rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 focus:ring-4 focus:ring-destructive/50 focus:outline-none transition shadow-lg animate-pulse"
                 autoFocus
               >
-                I Closed the Window
+                Window Yeeted Shut 🙌
               </AlertDialogAction>
             </AlertDialogFooter>
           </div>

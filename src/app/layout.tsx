@@ -33,6 +33,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <div className="animated-bg z-0" aria-hidden="true" />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

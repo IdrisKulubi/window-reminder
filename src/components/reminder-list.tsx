@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { useRemindersContext, ReminderTime } from "@/hooks/reminders-context";
-import { Trash2, Clock, Calendar, X } from "lucide-react";
+import { Trash2, Clock, Calendar, X, Bug } from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -62,18 +62,24 @@ export function ReminderList({ className }: ReminderListProps) {
 
   if (reminders.length === 0) {
     return (
-      <div className={`text-gray-500 text-center py-8 ${className ?? ""}`}
+      <div className={`text-primary/80 text-center py-8 bg-background/40 backdrop-blur-sm rounded-lg p-4 ${className ?? ""}`}
         aria-live="polite"
       >
-        No reminders set yet. Add your first reminder!
+        <div className="flex flex-col items-center">
+          <Bug className="h-8 w-8 text-primary/70 mb-2" />
+          <p>No mosquito defense set! Those little bloodsuckers are gonna have a party fr fr</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="w-full max-w-sm mx-auto">
-      <div className="flex justify-between items-center mb-2">
-        <span className="text-sm text-muted-foreground">{reminders.length} reminder{reminders.length !== 1 ? 's' : ''}</span>
+      <div className="flex justify-between items-center mb-2 bg-background/40 backdrop-blur-sm p-2 rounded-t-lg">
+        <span className="text-sm text-primary/90 flex items-center gap-1">
+          <Bug className="h-3 w-3" /> 
+          {reminders.length} skeeter {reminders.length !== 1 ? 'blockades' : 'blockade'}
+        </span>
         
         <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
           <AlertDialogTrigger asChild>
@@ -83,18 +89,18 @@ export function ReminderList({ className }: ReminderListProps) {
               className="text-destructive hover:bg-destructive/10 text-xs flex items-center h-7 px-2"
             >
               <X className="h-3 w-3 mr-1" />
-              Clear All
+              Yeet All
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="bg-background/95 border border-primary/20">
             <AlertDialogHeader>
-              <AlertDialogTitle>Clear all reminders?</AlertDialogTitle>
+              <AlertDialogTitle>Delete all mosquito defenses?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove all your reminders. This action cannot be undone.
+                This will clear your entire mosquito defense schedule. No cap, this can&apos;t be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>Nah, I&apos;m good</AlertDialogCancel>
               <AlertDialogAction 
                 onClick={() => {
                   clearReminders();
@@ -102,14 +108,14 @@ export function ReminderList({ className }: ReminderListProps) {
                 }}
                 className="bg-destructive hover:bg-destructive/90"
               >
-                Clear All Reminders
+                Yeet Everything
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>
       
-      <ul className={`w-full flex flex-col gap-2 ${className ?? ""}`}
+      <ul className={`w-full flex flex-col gap-2 ${className ?? ""} bg-background/30 backdrop-blur-sm p-3 rounded-b-lg`}
         aria-label="Reminder times list"
       >
         {reminders
@@ -117,17 +123,17 @@ export function ReminderList({ className }: ReminderListProps) {
           .map(reminder => (
             <li
               key={reminder.id}
-              className="flex items-center justify-between bg-muted rounded-lg px-4 py-3 shadow-sm hover:bg-accent transition-colors group animate-fade-in-slide"
+              className="flex items-center justify-between bg-background/70 rounded-lg px-4 py-3 shadow-sm hover:bg-accent/90 transition-colors group animate-fade-in-slide"
             >
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" />
                   <span className="font-mono text-lg tracking-wider text-primary">{reminder.time}</span>
-                  <span className="text-xs font-medium text-muted-foreground">({formatTime(reminder.time)})</span>
+                  <span className="text-xs font-medium text-primary/80">({formatTime(reminder.time)})</span>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
-                  <Calendar className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">{formatRecurrence(reminder)}</span>
+                  <Calendar className="h-3 w-3 text-primary/70" />
+                  <span className="text-xs text-primary/90">{formatRecurrence(reminder)}</span>
                 </div>
               </div>
               <Button
@@ -136,6 +142,7 @@ export function ReminderList({ className }: ReminderListProps) {
                 aria-label={`Remove reminder for ${reminder.time}`}
                 onClick={() => removeReminder(reminder.id)}
                 className="text-destructive hover:bg-destructive/10"
+                title="Yeet this reminder"
               >
                 <Trash2 className="w-5 h-5" />
               </Button>

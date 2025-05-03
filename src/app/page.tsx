@@ -8,7 +8,7 @@ import { FullScreenNotification } from "@/components/full-screen-notification";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { toast } from "sonner";
-import { BellRing } from "lucide-react";
+import { BellRing, Bug } from "lucide-react";
 
 function ReminderApp() {
   const { currentReminder, dismissCurrentReminder } = useRemindersContext();
@@ -37,11 +37,17 @@ function ReminderApp() {
   };
   
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background px-4">
-      <div className="flex flex-col items-center gap-4 w-full max-w-lg py-8">
-        <h1 className="text-4xl font-bold tracking-tight text-primary text-center">Window Reminder</h1>
-        <p className="text-muted-foreground text-center text-base max-w-md">
-          Set one or more times to get a full-screen reminder to close your window. Simple, beautiful, and private.
+    <div className="flex flex-col items-center justify-center min-h-screen bg-transparent relative z-10">
+      {/* Header with title */}
+      <div className="flex flex-col items-center gap-4 w-full max-w-2xl px-4 py-8 bg-background/30 backdrop-blur-md rounded-2xl shadow-lg mb-8 mt-6">
+        <div className="flex items-center gap-3">
+          <Bug className="h-8 w-8 text-destructive animate-bounce" />
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-primary text-center drop-shadow-md">No Skeeters Allowed</h1>
+          <Bug className="h-8 w-8 text-destructive animate-bounce" />
+        </div>
+        <p className="text-primary/90 text-center text-base max-w-md px-4 drop-shadow-sm">
+          Set reminders to close your windows because those blood-sucking demons don&apos;t pay rent. 
+          <span className="block mt-1 text-xs">✨ slay the mosquitoes, not your vibe ✨</span>
         </p>
         <div className="flex items-center gap-2">
           <ModeToggle />
@@ -56,14 +62,19 @@ function ReminderApp() {
           </Button>
         </div>
       </div>
-      <div className="w-full max-w-lg flex flex-col gap-8">
-        <div className="flex flex-col items-center gap-2">
-          <h2 className="text-xl font-semibold text-center text-primary mb-2">What time do you want to close the window?</h2>
-          <ReminderTimePicker />
+
+      {/* Main content - centered with larger max width */}
+      <div className="w-full max-w-3xl flex flex-col md:flex-row gap-6 px-4 mb-8 z-10">
+        {/* Time picker section - takes full width on mobile, half on desktop */}
+        <div className="flex-1 flex flex-col items-center bg-background/30 backdrop-blur-md p-6 rounded-xl shadow-lg min-h-[400px] justify-center">
+          <h2 className="text-xl font-semibold text-center text-primary mb-6 drop-shadow-md">When to yeet that window shut?</h2>
+          <ReminderTimePicker className="w-full max-w-sm" />
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <h3 className="text-lg font-medium text-primary mb-1">Your Reminders</h3>
-          <ReminderList />
+        
+        {/* Reminders list section - takes full width on mobile, half on desktop */}
+        <div className="flex-1 flex flex-col items-center bg-background/30 backdrop-blur-md p-6 rounded-xl shadow-lg min-h-[400px]">
+          <h3 className="text-xl font-semibold text-primary mb-4 drop-shadow-md">Your Anti-Mosquito Schedule</h3>
+          <ReminderList className="w-full" />
         </div>
       </div>
       
