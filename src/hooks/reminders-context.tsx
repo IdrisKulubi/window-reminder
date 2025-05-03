@@ -1,34 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
-/**
- * Recurrence type for reminders.
- */
 export type RecurrenceType = "daily" | "weekly" | "monthly";
 
-/**
- * Recurrence details for a reminder.
- */
 export interface ReminderRecurrence {
   type: RecurrenceType;
-  days?: number[];   // 0=Sun, 1=Mon, ... for weekly
-  dates?: number[];  // 1-31 for monthly
+  days?: number[];
+  dates?: number[];
 }
 
-/**
- * Interface for a single reminder time (24-hour format, e.g., "21:30").
- */
 export interface ReminderTime {
-  id: string; // unique identifier
-  time: string; // "HH:mm"
+  id: string;
+  time: string;
   recurrence: ReminderRecurrence;
 }
 
-/**
- * Hook return type.
- */
-export interface UseReminders {
+export interface RemindersContextValue {
   reminders: ReminderTime[];
   addReminder: (time: string, recurrence: ReminderRecurrence) => boolean;
   removeReminder: (id: string) => void;
@@ -37,18 +25,15 @@ export interface UseReminders {
   errorMessage: string | null;
 }
 
+const RemindersContext = createContext<RemindersContextValue | undefined>(undefined);
+
 const STORAGE_KEY = "window-reminder:reminders";
 
-/**
- * Custom hook for managing reminder times with localStorage persistence.
- * Handles validation, error state, and provides add/remove/clear functions.
- */
-export function useReminders(): UseReminders {
+export function RemindersProvider({ children }: { children: React.ReactNode }) {
   const [reminders, setReminders] = useState<ReminderTime[]>([]);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Load reminders from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -64,7 +49,6 @@ export function useReminders(): UseReminders {
     }
   }, []);
 
-  // Persist reminders to localStorage on change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(reminders));
@@ -76,10 +60,7 @@ export function useReminders(): UseReminders {
     }
   }, [reminders]);
 
-  // Validate time string (HH:mm, 24-hour)
   const isValidTime = (time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
-
-  // Validate recurrence
   const isValidRecurrence = (recurrence: ReminderRecurrence) => {
     if (recurrence.type === "weekly") {
       return Array.isArray(recurrence.days) && recurrence.days.length > 0;
@@ -87,10 +68,9 @@ export function useReminders(): UseReminders {
     if (recurrence.type === "monthly") {
       return Array.isArray(recurrence.dates) && recurrence.dates.length > 0 && recurrence.dates.every(d => d >= 1 && d <= 31);
     }
-    return true; // daily is always valid
+    return true;
   };
 
-  // Add a new reminder (returns true if added, false if invalid/duplicate)
   const addReminder = useCallback((time: string, recurrence: ReminderRecurrence) => {
     setHasError(false);
     setErrorMessage(null);
@@ -106,7 +86,6 @@ export function useReminders(): UseReminders {
       console.warn("[Reminders] Invalid recurrence:", recurrence);
       return false;
     }
-    // Prevent duplicate: same time + same recurrence
     if (reminders.some(r => r.time === time && JSON.stringify(r.recurrence) === JSON.stringify(recurrence))) {
       setHasError(true);
       setErrorMessage("Reminder for this time and recurrence already exists.");
@@ -122,7 +101,6 @@ export function useReminders(): UseReminders {
     return true;
   }, [reminders]);
 
-  // Remove a reminder by id
   const removeReminder = useCallback((id: string) => {
     setReminders(prev => {
       const updated = prev.filter(r => r.id !== id);
@@ -131,13 +109,12 @@ export function useReminders(): UseReminders {
     });
   }, []);
 
-  // Clear all reminders
   const clearReminders = useCallback(() => {
     setReminders([]);
     console.log("[Reminders] Cleared all reminders");
   }, []);
 
-  return {
+  const value: RemindersContextValue = {
     reminders,
     addReminder,
     removeReminder,
@@ -145,4 +122,14 @@ export function useReminders(): UseReminders {
     hasError,
     errorMessage,
   };
+
+  return (
+    <RemindersContext.Provider value={value}>{children}</RemindersContext.Provider>
+  );
+}
+
+export function useRemindersContext() {
+  const ctx = useContext(RemindersContext);
+  if (!ctx) throw new Error("useRemindersContext must be used within a RemindersProvider");
+  return ctx;
 } 

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { useReminders, ReminderTime } from "@/hooks/use-reminders";
+import { useRemindersContext, ReminderTime } from "@/hooks/reminders-context";
 import { Trash2 } from "lucide-react";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -36,7 +36,7 @@ export interface ReminderListProps {
  * Accessible, beautiful, and responsive.
  */
 export function ReminderList({ className }: ReminderListProps) {
-  const { reminders, removeReminder } = useReminders();
+  const { reminders, removeReminder } = useRemindersContext();
 
   if (reminders.length === 0) {
     return (
@@ -78,6 +78,3 @@ export function ReminderList({ className }: ReminderListProps) {
   );
 }
 
-// Tailwind custom animation class (add to your global CSS if not present):
-// .animate-fade-in-slide { animation: fade-in-slide 0.5s cubic-bezier(0.22, 1, 0.36, 1); }
-// @keyframes fade-in-slide { 0% { opacity: 0; transform: translateY(16px); } 100% { opacity: 1; transform: translateY(0); } } 

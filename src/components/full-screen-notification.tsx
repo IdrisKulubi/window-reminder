@@ -12,10 +12,6 @@ export interface FullScreenNotificationProps {
   onDismiss: () => void;
 }
 
-/**
- * Full-screen, accessible notification for due reminders.
- * Uses shadcn/ui AlertDialog for accessibility and focus management.
- */
 export function FullScreenNotification({ open, reminder, onDismiss }: FullScreenNotificationProps) {
   return (
     <AlertDialog open={open}>
@@ -25,7 +21,7 @@ export function FullScreenNotification({ open, reminder, onDismiss }: FullScreen
             Reminder: Close Your Window!
           </AlertDialogTitle>
           <AlertDialogDescription className="text-lg md:text-2xl text-center text-primary font-mono">
-            It's {reminder?.time}. Please make sure your window is closed.
+            It&apos;s {reminder?.time}. Please make sure your window is closed.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter className="w-full flex flex-col items-center mt-8">
