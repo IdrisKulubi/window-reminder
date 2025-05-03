@@ -3,12 +3,53 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useRemindersContext, ReminderRecurrence, RecurrenceType } from "@/hooks/reminders-context";
-import { CheckCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
+
+function getNextTriggerTime(time: string, recurrence: ReminderRecurrence): Date {
+  const now = new Date();
+  const [hh, mm] = time.split(":").map(Number);
+  let next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+  if (recurrence.type === "daily") {
+    if (next <= now) next.setDate(next.getDate() + 1);
+    return next;
+  }
+  if (recurrence.type === "weekly" && recurrence.days) {
+    let minDiff = 8, targetDay = now.getDay();
+    for (const d of recurrence.days) {
+      let diff = (d - now.getDay() + 7) % 7;
+      if (diff === 0 && next <= now) diff = 7;
+      if (diff < minDiff) {
+        minDiff = diff;
+        targetDay = d;
+      }
+    }
+    next.setDate(next.getDate() + minDiff);
+    return next;
+  }
+  if (recurrence.type === "monthly" && recurrence.dates) {
+    const today = now.getDate();
+    let minDiff = 32, targetDate = today;
+    for (const d of recurrence.dates) {
+      let diff = d - today;
+      if (diff === 0 && next <= now) diff = 32;
+      if (diff < 0) diff += 31;
+      if (diff < minDiff) {
+        minDiff = diff;
+        targetDate = d;
+      }
+    }
+    next.setDate(now.getDate() + minDiff);
+    return next;
+  }
+  // fallback: tomorrow
+  next.setDate(next.getDate() + 1);
+  return next;
+}
 
 export interface ReminderTimePickerProps {
   className?: string;
@@ -20,12 +61,11 @@ export function ReminderTimePicker({ className }: ReminderTimePickerProps) {
   const [selectedDays, setSelectedDays] = useState<number[]>([1,2,3,4,5]); // Default: Mon-Fri
   const [selectedDates, setSelectedDates] = useState<number[]>([1]);
   const { addReminder, hasError, errorMessage } = useRemindersContext();
-  const [success, setSuccess] = useState(false);
   const [shake, setShake] = useState(false);
+  const [nextTrigger, setNextTrigger] = useState<Date | null>(null);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccess(false);
     setShake(false);
     if (!time) return;
     let recurrence: ReminderRecurrence;
@@ -39,8 +79,11 @@ export function ReminderTimePicker({ className }: ReminderTimePickerProps) {
     const added = addReminder(time, recurrence);
     if (added) {
       setTime("");
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 1200);
+      const next = getNextTriggerTime(time, recurrence);
+      setNextTrigger(next);
+      toast.success(
+        `Reminder set! Next reminder will trigger at ${next.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} on ${next.toLocaleDateString()}`
+      );
     } else {
       setShake(true);
       setTimeout(() => setShake(false), 500);
@@ -53,6 +96,13 @@ export function ReminderTimePicker({ className }: ReminderTimePickerProps) {
   };
   const toggleDate = (date: number) => {
     setSelectedDates(prev => prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date]);
+  };
+
+  // Format time for display
+  const formatTimeExample = (hour24: number): string => {
+    const hour12 = hour24 > 12 ? hour24 - 12 : hour24 === 0 ? 12 : hour24;
+    const ampm = hour24 >= 12 ? 'PM' : 'AM';
+    return `${hour24.toString().padStart(2, '0')}:00 = ${hour12}:00 ${ampm}`;
   };
 
   return (
@@ -73,6 +123,15 @@ export function ReminderTimePicker({ className }: ReminderTimePickerProps) {
         className={`w-full text-3xl px-4 py-3 rounded-lg border border-input bg-background text-primary text-center focus:outline-none focus:ring-2 focus:ring-primary transition ${shake ? "animate-shake" : ""}`}
         aria-label="Select time for reminder"
       />
+      <div className="flex flex-col gap-2 text-xs text-muted-foreground text-center">
+        <p>Time is in 24-hour format</p>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs mt-1">
+          <div>{formatTimeExample(9)}</div>
+          <div>{formatTimeExample(13)}</div>
+          <div>{formatTimeExample(17)}</div>
+          <div>{formatTimeExample(21)}</div>
+        </div>
+      </div>
       <div className="flex flex-col gap-2">
         <label className="font-medium text-sm text-primary mb-1">How often?</label>
         <RadioGroup
@@ -116,12 +175,6 @@ export function ReminderTimePicker({ className }: ReminderTimePickerProps) {
       >
         Set Reminder
       </Button>
-      {/* Success animation */}
-      <div className="absolute -top-10 left-1/2 -translate-x-1/2">
-        {success && (
-          <CheckCircle className="text-green-500 w-8 h-8 animate-pop-in" aria-label="Reminder added!" />
-        )}
-      </div>
       {/* Error animation */}
       {hasError && errorMessage && (
         <div
@@ -129,6 +182,11 @@ export function ReminderTimePicker({ className }: ReminderTimePickerProps) {
           role="alert"
         >
           {errorMessage}
+        </div>
+      )}
+      {nextTrigger && (
+        <div className="text-xs text-green-600 text-center mt-2">
+          Next reminder will trigger at {nextTrigger.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} on {nextTrigger.toLocaleDateString()}
         </div>
       )}
     </form>

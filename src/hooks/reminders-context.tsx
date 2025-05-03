@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 
 export type RecurrenceType = "daily" | "weekly" | "monthly";
 
@@ -23,17 +23,109 @@ export interface RemindersContextValue {
   clearReminders: () => void;
   hasError: boolean;
   errorMessage: string | null;
+  // Timer-related
+  currentReminder: ReminderTime | null;
+  dismissCurrentReminder: () => void;
 }
 
 const RemindersContext = createContext<RemindersContextValue | undefined>(undefined);
 
 const STORAGE_KEY = "window-reminder:reminders";
+const DISMISSED_KEY = "window-reminder:dismissed";
+
+function getToday(): string {
+  const now = new Date();
+  return now.toLocaleDateString("en-CA"); // YYYY-MM-DD
+}
+
+function getCurrentWeekdayAndDate(): { weekday: number; date: number } {
+  const now = new Date();
+  return { weekday: now.getDay(), date: now.getDate() };
+}
+
+function isReminderDue(reminder: ReminderTime, now: Date, weekday: number, date: number): boolean {
+  // Reminder time for today
+  const [hh, mm] = reminder.time.split(":").map(Number);
+  const reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+  // Only trigger if reminder time is <= now (today)
+  if (reminderDate > now) return false;
+  const { recurrence } = reminder;
+  if (recurrence.type === "daily") return true;
+  if (recurrence.type === "weekly" && recurrence.days) {
+    return recurrence.days.includes(weekday);
+  }
+  if (recurrence.type === "monthly" && recurrence.dates) {
+    return recurrence.dates.includes(date);
+  }
+  return false;
+}
 
 export function RemindersProvider({ children }: { children: React.ReactNode }) {
   const [reminders, setReminders] = useState<ReminderTime[]>([]);
   const [hasError, setHasError] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentReminder, setCurrentReminder] = useState<ReminderTime | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const initialCheckDone = useRef(false);
 
+  // Get dismissed reminders for today from localStorage
+  const getDismissed = useCallback((): string[] => {
+    try {
+      const all = JSON.parse(localStorage.getItem(DISMISSED_KEY) || "{}") as Record<string, string[]>;
+      return all[getToday()] || [];
+    } catch (err) {
+      console.error("[Reminders] Error reading dismissed reminders:", err);
+      return [];
+    }
+  }, []);
+
+  // Mark a reminder as dismissed for today
+  const dismissCurrentReminder = useCallback(() => {
+    if (!currentReminder) return;
+    
+    console.log("[Reminders] Dismissing current reminder:", currentReminder.id, currentReminder.time);
+    try {
+      const all = JSON.parse(localStorage.getItem(DISMISSED_KEY) || "{}") as Record<string, string[]>;
+      const today = getToday();
+      all[today] = Array.from(new Set([...(all[today] || []), currentReminder.id]));
+      localStorage.setItem(DISMISSED_KEY, JSON.stringify(all));
+      setCurrentReminder(null);
+    } catch (err) {
+      console.error("[Reminders] Error dismissing reminder:", err);
+    }
+  }, [currentReminder]);
+
+  // Check for due reminders
+  const checkReminders = useCallback(() => {
+    if (reminders.length === 0) return;
+    
+    const now = new Date();
+    const { weekday, date } = getCurrentWeekdayAndDate();
+    const dismissed = getDismissed();
+    
+    console.log(`[Reminders] Checking ${reminders.length} reminders at ${now.toTimeString()}. Dismissed today: ${dismissed.length}`);
+    
+    for (const reminder of reminders) {
+      const isDue = isReminderDue(reminder, now, weekday, date);
+      const isDismissed = dismissed.includes(reminder.id);
+      
+      console.log(`[Reminders] Reminder ${reminder.id} (${reminder.time}): isDue=${isDue}, isDismissed=${isDismissed}`);
+      
+      if (isDue && !isDismissed) {
+        console.log(`[Reminders] FOUND DUE REMINDER: ${reminder.id} at ${reminder.time}`);
+        setCurrentReminder(reminder);
+        return; // Only show one reminder at a time
+      }
+    }
+    
+    // If we get here, no due reminders were found
+    if (currentReminder) {
+      console.log(`[Reminders] Clearing current reminder: no due reminders found`);
+      setCurrentReminder(null);
+    }
+  }, [reminders, getDismissed, currentReminder]);
+
+  // Load reminders from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -49,6 +141,33 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Start timer when reminders are loaded
+  useEffect(() => {
+    // Initial check after reminders are loaded
+    if (reminders.length > 0 && !initialCheckDone.current) {
+      console.log("[Reminders] Initial check after load");
+      initialCheckDone.current = true;
+      checkReminders();
+    }
+    
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    
+    // Set up new interval
+    console.log("[Reminders] Starting timer check interval");
+    intervalRef.current = setInterval(checkReminders, 10000); // every 10 seconds
+    
+    return () => {
+      if (intervalRef.current) {
+        console.log("[Reminders] Cleaning up timer interval");
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [reminders, checkReminders]);
+
+  // Persist reminders to localStorage on change
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(reminders));
@@ -60,6 +179,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     }
   }, [reminders]);
 
+  // Validation functions
   const isValidTime = (time: string) => /^([01]\d|2[0-3]):([0-5]\d)$/.test(time);
   const isValidRecurrence = (recurrence: ReminderRecurrence) => {
     if (recurrence.type === "weekly") {
@@ -71,6 +191,7 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  // Add a new reminder
   const addReminder = useCallback((time: string, recurrence: ReminderRecurrence) => {
     setHasError(false);
     setErrorMessage(null);
@@ -96,21 +217,30 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     setReminders(prev => {
       const updated = [...prev, newReminder];
       console.log("[Reminders] Added:", newReminder);
+      // Immediately check if this new reminder should be triggered
+      setTimeout(() => checkReminders(), 100);
       return updated;
     });
     return true;
-  }, [reminders]);
+  }, [reminders, checkReminders]);
 
+  // Remove a reminder by id
   const removeReminder = useCallback((id: string) => {
     setReminders(prev => {
       const updated = prev.filter(r => r.id !== id);
       console.log("[Reminders] Removed id:", id, "Updated:", updated);
       return updated;
     });
-  }, []);
+    // If the current reminder is being removed, clear it
+    if (currentReminder && currentReminder.id === id) {
+      setCurrentReminder(null);
+    }
+  }, [currentReminder]);
 
+  // Clear all reminders
   const clearReminders = useCallback(() => {
     setReminders([]);
+    setCurrentReminder(null);
     console.log("[Reminders] Cleared all reminders");
   }, []);
 
@@ -121,6 +251,8 @@ export function RemindersProvider({ children }: { children: React.ReactNode }) {
     clearReminders,
     hasError,
     errorMessage,
+    currentReminder,
+    dismissCurrentReminder,
   };
 
   return (

@@ -22,14 +22,6 @@ function getToday(): string {
 }
 
 /**
- * Returns current time string (HH:mm, 24-hour) in local time.
- */
-function getCurrentTime(): string {
-  const now = new Date();
-  return now.toTimeString().slice(0, 5); // HH:mm
-}
-
-/**
  * Returns the current weekday (0=Sun, 1=Mon, ... 6=Sat) and date (1-31).
  */
 function getCurrentWeekdayAndDate(): { weekday: number; date: number } {
@@ -40,8 +32,12 @@ function getCurrentWeekdayAndDate(): { weekday: number; date: number } {
 /**
  * Checks if a reminder is due now, based on time and recurrence.
  */
-function isReminderDue(reminder: ReminderTime, nowTime: string, weekday: number, date: number): boolean {
-  if (reminder.time !== nowTime) return false;
+function isReminderDue(reminder: ReminderTime, now: Date, weekday: number, date: number): boolean {
+  // Reminder time for today
+  const [hh, mm] = reminder.time.split(":").map(Number);
+  const reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hh, mm, 0, 0);
+  // Only trigger if reminder time is <= now (today)
+  if (reminderDate > now) return false;
   const { recurrence } = reminder;
   if (recurrence.type === "daily") return true;
   if (recurrence.type === "weekly" && recurrence.days) {
@@ -55,7 +51,7 @@ function isReminderDue(reminder: ReminderTime, nowTime: string, weekday: number,
 
 /**
  * Custom hook to check if a reminder is due and not yet dismissed today.
- * Checks every minute. Persists dismissed reminders in localStorage.
+ * Checks every 10 seconds. Persists dismissed reminders in localStorage.
  */
 export function useReminderTimer(reminders: ReminderTime[]): UseReminderTimer {
   const [dueReminder, setDueReminder] = useState<ReminderTime | null>(null);
@@ -85,19 +81,19 @@ export function useReminderTimer(reminders: ReminderTime[]): UseReminderTimer {
     }
   }, [dueReminder]);
 
-  // Check for due reminders every minute
+  // Check for due reminders every 10 seconds
   useEffect(() => {
     function checkReminders() {
-      const nowTime = getCurrentTime();
+      const now = new Date();
       const { weekday, date } = getCurrentWeekdayAndDate();
       const dismissed = getDismissed();
       const due = reminders.find(r =>
-        isReminderDue(r, nowTime, weekday, date) && !dismissed.includes(r.id)
+        isReminderDue(r, now, weekday, date) && !dismissed.includes(r.id)
       );
       setDueReminder(due || null);
     }
     checkReminders();
-    intervalRef.current = setInterval(checkReminders, 60 * 1000);
+    intervalRef.current = setInterval(checkReminders, 10000); // every 10 seconds
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };

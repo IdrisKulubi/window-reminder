@@ -3,6 +3,7 @@ const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
   '/window.svg',
+  '/reminder.mp3',
   // Add more static assets if needed
 ];
 
@@ -27,8 +28,18 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request).then(response =>
       response || fetch(event.request).then(fetchRes => {
-        // Optionally cache new requests
-        return fetchRes;
+        // Cache assets but not API requests
+        if (event.request.url.includes('/api/')) {
+          return fetchRes;
+        }
+        
+        return caches.open(CACHE_NAME).then(cache => {
+          cache.put(event.request, fetchRes.clone());
+          return fetchRes;
+        });
+      }).catch(() => {
+        // Return a fallback for offline pages
+        return caches.match('/');
       })
     )
   );
